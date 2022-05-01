@@ -1,0 +1,68 @@
+#!/bin/sh
+
+uci set fstab.@global[0].anon_mount='1'
+uci commit fstab
+
+uci set system.@system[0].hostname='VAIOBYN'
+uci set system.@system[0].timezone=CST-8
+uci set system.@system[0].zonename=Asia/Shanghai
+uci commit system
+
+uci set wireless.radio0.channel='auto'
+uci set wireless.default_radio0.ssid='VAION'
+uci set wireless.default_radio0.key='sonyvaiotz13w'
+uci set wireless.radio0.disabled='1'
+uci set wireless.default_radio0.disabled='1'
+uci commit wireless
+wifi up
+
+uci set network.globals.ula_prefix=''
+#uci set network.@device[0].mtu='1472'
+uci set network.@device[0].stp='1'
+uci set network.lan.ipaddr='192.168.1.111'
+uci set network.lan.netmask='255.255.255.0'
+uci set network.lan.gateway='192.168.1.1'
+uci del_list network.lan.dns='192.168.1.1'
+uci add_list network.lan.dns='192.168.1.1'
+uci set network.lan.ip6assign=''
+uci commit network
+
+cat /etc/config/network | grep lan6 > null
+if [ $? -ne 0 ];then
+cat >>/etc/config/network <<EOF
+config interface 'lan6'
+	option proto 'dhcpv6'
+	option device 'br-lan'
+	option reqaddress 'try'
+	option reqprefix 'auto'
+EOF
+fi
+
+uci del_list dhcp.lan.list ra_flags='none'
+uci add_list dhcp.lan.list ra_flags='none'
+uci set dhcp.lan.ra=''
+uci set dhcp.lan.dhcpv4=''
+uci set dhcp.lan.dhcpv6=''
+uci set dhcp.lan.ignore='1'
+uci commit dhcp
+
+cat /etc/config/dhcp | grep lan6 > null
+if [ $? -ne 0 ];then
+cat >> /etc/config/dhcp <<EOF
+config dhcp 'lan6'
+	option interface 'lan6'
+	option ignore '1'
+	list ra_flags 'none'
+EOF
+fi
+
+uci del_list firewall.@zone[0].network='lan6'
+uci add_list firewall.@zone[0].network='lan6'
+uci set firewall.@defaults[0].flow_offloading='1'
+uci set firewall.@defaults[0].flow_offloading_hw='1'
+uci set firewall.@zone[1].input='ACCEPT'
+uci commit firewall
+
+sed -i 's/root::0:0:99999:7:::/root:$1$.t6rFgd7$ig9K8RzzDimBeDAWNmnEG1:18046:0:99999:7:::/g' /etc/shadow
+
+exit 0
